@@ -1,31 +1,30 @@
 import os
 
 import dj_database_url
-
 from environs import Env
-
 
 env = Env()
 env.read_env()
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
+SECRET_KEY = env.str('SECRET_KEY')
 
-SECRET_KEY = env('SECRET_KEY')
 DEBUG = env.bool('DEBUG', True)
 
 ALLOWED_HOSTS = env.list('ALLOWED_HOSTS', ['127.0.0.1', 'localhost'])
 
 INSTALLED_APPS = [
-    'foodcartapp.apps.FoodcartappConfig',
-    'restaurateur.apps.RestaurateurConfig',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+
+    'foodcartapp.apps.FoodcartappConfig',
+    'restaurateur.apps.RestaurateurConfig',
+
     'debug_toolbar',
 ]
 
@@ -61,7 +60,7 @@ TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
         'DIRS': [
-            os.path.join(BASE_DIR, "templates"),
+            os.path.join(BASE_DIR, 'templates'),
         ],
         'APP_DIRS': True,
         'OPTIONS': {
@@ -77,12 +76,9 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'star_burger.wsgi.application'
 
-MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
-MEDIA_URL = '/media/'
-
 DATABASES = {
     'default': dj_database_url.config(
-        default='sqlite:////{0}'.format(os.path.join(BASE_DIR, 'db.sqlite3'))
+        default=f'sqlite:////{os.path.join(BASE_DIR, "db.sqlite3")}'
     )
 }
 
@@ -113,12 +109,17 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 
-INTERNAL_IPS = [
-    '127.0.0.1'
-]
-
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
 STATICFILES_DIRS = [
-    os.path.join(BASE_DIR, "assets"),
-    os.path.join(BASE_DIR, "bundles"),
+    os.path.join(BASE_DIR, 'assets'),
+    os.path.join(BASE_DIR, 'bundles'),
+]
+
+MEDIA_URL = '/media/'
+
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+INTERNAL_IPS = [
+    '127.0.0.1'
 ]
