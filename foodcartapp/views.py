@@ -62,10 +62,11 @@ def register_order(request):
     """Форма регистрации заказа."""
 
     try:
+        print('request', request)
         order = json.loads(request.body.decode())
         print('order', type(order), order)
     except ValueError as error:
         return JsonResponse({
             'error': error,
         })
-    return JsonResponse({order})
+    return JsonResponse(order)
