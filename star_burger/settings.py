@@ -26,6 +26,7 @@ INSTALLED_APPS = [
     'restaurateur.apps.RestaurateurConfig',
 
     'debug_toolbar',
+    'phonenumber_field',
 ]
 
 MIDDLEWARE = [
