@@ -2,8 +2,9 @@ import json
 
 from django.http import JsonResponse
 from django.templatetags.static import static
+from phonenumber_field.phonenumber import PhoneNumber
 
-from .models import Product
+from .models import Product, Order, Client, OrderedProduct
 
 
 def banners_list_api(request):
@@ -58,13 +59,46 @@ def product_list_api(request):
     })
 
 
+def create_client_object(incoming_order: dict) -> object:
+    """Создание объекта Client."""
+
+    phonenumber = PhoneNumber.from_string(incoming_order['phonenumber'], region='RU')
+    client, created = Client.objects.get_or_create(
+        phonenumber=phonenumber.as_e164,
+        defaults={
+            'firstname': incoming_order['firstname'],
+            'lastname': incoming_order['lastname']
+        }
+    )
+    return client
+
+
+def create_order_object(incoming_order: dict, client: object) -> object:
+    """Создание объекта Order и добавление его к объекту Client."""
+
+    new_order_object, created = Order.objects.get_or_create(
+        address=incoming_order['address'],
+        client=client,
+    )
+    if created:
+        return new_order_object
+
+
 def register_order(request):
     """Форма регистрации заказа."""
 
     try:
-        print('request', request)
         order = json.loads(request.body.decode())
-        print('order', type(order), order)
+        client = create_client_object(order)
+        if order['products']:
+            new_order = create_order_object(order, client)
+            if new_order:
+                for burger in order['products']:
+                    OrderedProduct.objects.create(
+                        order=new_order,
+                        product=Product.objects.get(id=burger['product']),
+                        quantity=burger['quantity']
+                    )
     except ValueError as error:
         return JsonResponse({
             'error': error,

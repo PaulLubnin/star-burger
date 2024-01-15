@@ -125,7 +125,7 @@ class Client(models.Model):
     """Клиент."""
 
     firstname = models.CharField(
-        'Имя заказчика',
+        'Имя',
         max_length=32,
     )
     lastname = models.CharField(
@@ -134,6 +134,7 @@ class Client(models.Model):
     )
     phonenumber = PhoneNumberField(
         'Номер телефона',
+        unique=True,
         db_index=True
     )
 
@@ -142,18 +143,18 @@ class Client(models.Model):
         verbose_name_plural = 'Клиенты'
 
     def __str__(self):
-        return f'ID: {self.id}, {self.phonenumber}'
+        return f'ID: {self.id}, {self.phonenumber}, {self.firstname} {self.lastname}'
 
 
 class Order(models.Model):
     """Заказ."""
 
     address = models.TextField(
-        'Адресс доставки'
+        'Адрес доставки'
     )
     client = models.ForeignKey(
         Client,
-        'Клиент',
+        verbose_name='Клиент',
         on_delete=models.CASCADE,
         related_name='orders'
     )
@@ -164,3 +165,30 @@ class Order(models.Model):
 
     def __str__(self):
         return f'{self.client.firstname} {self.client.lastname}, {self.address}'
+
+
+class OrderedProduct(models.Model):
+    """Элемент заказа."""
+
+    order = models.ForeignKey(
+        Order,
+        verbose_name='Заказ',
+        on_delete=models.CASCADE,
+        related_name='ordered_products',
+    )
+    product = models.ForeignKey(
+        Product,
+        verbose_name='Товар',
+        on_delete=models.CASCADE,
+        related_name='ordered_products'
+    )
+    quantity = models.PositiveIntegerField(
+        'Количество'
+    )
+
+    class Meta:
+        verbose_name = 'Элемент заказа'
+        verbose_name_plural = 'Элементы заказа'
+
+    def __str__(self):
+        return f'{self.product.name}, {self.order.client.firstname} {self.order.client.lastname} {self.order.address}'
