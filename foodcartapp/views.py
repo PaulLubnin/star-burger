@@ -1,10 +1,10 @@
-import json
-
 from django.http import JsonResponse
 from django.templatetags.static import static
 from phonenumber_field.phonenumber import PhoneNumber
+from rest_framework.decorators import api_view
 
 from .models import Product, Order, Client, OrderedProduct
+from .serializers import ClientSerializer, OrderSerializer, OrderedProductSerializer
 
 
 def banners_list_api(request):
@@ -62,45 +62,59 @@ def product_list_api(request):
 def create_client_object(incoming_order: dict) -> object:
     """Создание объекта Client."""
 
-    phonenumber = PhoneNumber.from_string(incoming_order['phonenumber'], region='RU')
+    client_serialization = ClientSerializer(data=incoming_order)
+    client_serialization.is_valid(raise_exception=True)
+    phonenumber = PhoneNumber.from_string(incoming_order.get('phonenumber'), region='RU')
     client, created = Client.objects.get_or_create(
         phonenumber=phonenumber.as_e164,
         defaults={
-            'firstname': incoming_order['firstname'],
-            'lastname': incoming_order['lastname']
+            'firstname': incoming_order.get('firstname'),
+            'lastname': incoming_order.get('lastname')
         }
     )
     return client
 
 
+def create_ordered_product_object(products: list, order: object):
+    """Создание объекта OrderedProduct и добавление в Order."""
+
+    for burger in products:
+        burger['order'] = order.pk
+        product_serialization = OrderedProductSerializer(data=burger)
+        product_serialization.is_valid(raise_exception=True)
+        OrderedProduct.objects.create(
+            order_id=burger['order'],
+            product=Product.objects.get(id=burger['product']),
+            quantity=burger['quantity']
+        )
+
+
 def create_order_object(incoming_order: dict, client: object) -> object:
     """Создание объекта Order и добавление его к объекту Client."""
 
-    new_order_object, created = Order.objects.get_or_create(
-        address=incoming_order['address'],
+    order_serialization = OrderSerializer(data=incoming_order)
+    order_serialization.is_valid(raise_exception=True)
+    new_order_object = Order.objects.create(
         client=client,
+        address=incoming_order.get('address'),
     )
-    if created:
-        return new_order_object
+    create_ordered_product_object(incoming_order.get('products'), new_order_object)
+    return new_order_object
 
 
+@api_view(http_method_names=('POST',))
 def register_order(request):
     """Форма регистрации заказа."""
 
     try:
-        order = json.loads(request.body.decode())
-        client = create_client_object(order)
-        if order['products']:
-            new_order = create_order_object(order, client)
-            if new_order:
-                for burger in order['products']:
-                    OrderedProduct.objects.create(
-                        order=new_order,
-                        product=Product.objects.get(id=burger['product']),
-                        quantity=burger['quantity']
-                    )
+        incoming_order = request.data
+        if not incoming_order.get('products'):
+            return JsonResponse({'error': 'В заказе не хвататет бургеров.'})
+        client = create_client_object(incoming_order)
+        order = create_order_object(incoming_order, client)
+
     except ValueError as error:
         return JsonResponse({
             'error': error,
         })
-    return JsonResponse(order)
+    return JsonResponse({})

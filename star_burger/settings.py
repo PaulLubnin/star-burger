@@ -27,6 +27,7 @@ INSTALLED_APPS = [
 
     'debug_toolbar',
     'phonenumber_field',
+    'rest_framework',
 ]
 
 MIDDLEWARE = [
