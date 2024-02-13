@@ -86,7 +86,7 @@ def create_ordered_product_object(products: list, order: object):
         product_serialization.is_valid(raise_exception=True)
         OrderedProduct.objects.create(
             order_id=burger['order'],
-            product=Product.objects.get(id=burger['product']),
+            product_id=burger['product'],
             quantity=burger['quantity']
         )
 
@@ -110,17 +110,16 @@ def register_order(request):
 
     try:
         incoming_order = request.data
-        print('incoming_order', incoming_order)
         products = incoming_order.get('products')
         if not isinstance(products, list):
-            return Response({'error': 'The products field should be a list.'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'products': 'The products field should be a list.'}, status=status.HTTP_400_BAD_REQUEST)
         if not products:
-            return Response({'error': 'The products field must not be empty.'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'products': 'The products field must not be empty.'}, status=status.HTTP_400_BAD_REQUEST)
         if not isinstance(products[0], dict):
-            return Response({'error': 'The list of products must contain dictionaries.'}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({'products': 'The list of products must contain dictionaries.'}, status=status.HTTP_400_BAD_REQUEST)
         client = create_client_object(incoming_order)
         order = create_order_object(incoming_order, client)
 
     except ValueError as error:
-        return Response({'error': error}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({'error': f'{error}'}, status=status.HTTP_400_BAD_REQUEST)
     return Response({'message': 'Order created.'}, status=status.HTTP_201_CREATED)

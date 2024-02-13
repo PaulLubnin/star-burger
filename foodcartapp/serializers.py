@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from phonenumber_field import serializerfields
-from foodcartapp.models import Client, Order, OrderedProduct
+from foodcartapp.models import Client, Order, OrderedProduct, Product
 
 
 class ClientSerializer(serializers.ModelSerializer):
@@ -35,3 +35,11 @@ class OrderedProductSerializer(serializers.ModelSerializer):
     class Meta:
         model = OrderedProduct
         fields = ('order', 'product', 'quantity')
+
+    def validate_product(self, value):
+        """Проверка доступных Product."""
+
+        all_products = Product.objects.values_list('pk', flat=True)
+        if value not in all_products:
+            raise serializers.ValidationError(f'Invalid primary key "{value}".')
+        return value
