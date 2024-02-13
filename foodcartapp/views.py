@@ -1,7 +1,9 @@
 from django.http import JsonResponse
 from django.templatetags.static import static
 from phonenumber_field.phonenumber import PhoneNumber
+from rest_framework import status
 from rest_framework.decorators import api_view
+from rest_framework.response import Response
 
 from .models import Product, Order, Client, OrderedProduct
 from .serializers import ClientSerializer, OrderSerializer, OrderedProductSerializer
@@ -108,13 +110,17 @@ def register_order(request):
 
     try:
         incoming_order = request.data
-        if not incoming_order.get('products'):
-            return JsonResponse({'error': 'В заказе не хвататет бургеров.'})
+        print('incoming_order', incoming_order)
+        products = incoming_order.get('products')
+        if not isinstance(products, list):
+            return Response({'error': 'The products field should be a list.'}, status=status.HTTP_400_BAD_REQUEST)
+        if not products:
+            return Response({'error': 'The products field must not be empty.'}, status=status.HTTP_400_BAD_REQUEST)
+        if not isinstance(products[0], dict):
+            return Response({'error': 'The list of products must contain dictionaries.'}, status=status.HTTP_400_BAD_REQUEST)
         client = create_client_object(incoming_order)
         order = create_order_object(incoming_order, client)
 
     except ValueError as error:
-        return JsonResponse({
-            'error': error,
-        })
-    return JsonResponse({})
+        return Response({'error': error}, status=status.HTTP_400_BAD_REQUEST)
+    return Response({'message': 'Order created.'}, status=status.HTTP_201_CREATED)
