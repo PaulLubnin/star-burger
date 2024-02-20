@@ -12,18 +12,18 @@ class ClientSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Client
-        fields = ('id', 'firstname', 'lastname', 'phonenumber')
+        fields = ('firstname', 'lastname', 'phonenumber')
 
 
 class OrderSerializer(serializers.ModelSerializer):
     """Сериализатор модели Order."""
 
     address = serializers.CharField(required=True)
-    products = serializers.ListField(allow_empty=False)
+    products = serializers.ListField(allow_empty=False, read_only=True)
 
     class Meta:
         model = Order
-        fields = ('address', 'products')
+        fields = ('id', 'address', 'products')
 
     def validate_products(self, value):
         """Проверка поля products."""

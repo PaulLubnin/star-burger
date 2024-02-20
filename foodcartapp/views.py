@@ -114,4 +114,7 @@ def register_order(request):
         order = create_order_object(incoming_order, client)
     except ValueError as error:
         return Response({'error': f'{error}'}, status=status.HTTP_400_BAD_REQUEST)
-    return Response({'message': 'Order created.'}, status=status.HTTP_201_CREATED)
+    client_serializer = ClientSerializer(client)
+    order_serializer = OrderSerializer(order)
+    client_order = {**{'id': order_serializer.data.get('id')}, **client_serializer.data}
+    return Response(client_order, status=status.HTTP_201_CREATED)
