@@ -110,16 +110,8 @@ def register_order(request):
 
     try:
         incoming_order = request.data
-        products = incoming_order.get('products')
-        if not isinstance(products, list):
-            return Response({'products': 'The products field should be a list.'}, status=status.HTTP_400_BAD_REQUEST)
-        if not products:
-            return Response({'products': 'The products field must not be empty.'}, status=status.HTTP_400_BAD_REQUEST)
-        if not isinstance(products[0], dict):
-            return Response({'products': 'The list of products must contain dictionaries.'}, status=status.HTTP_400_BAD_REQUEST)
         client = create_client_object(incoming_order)
         order = create_order_object(incoming_order, client)
-
     except ValueError as error:
         return Response({'error': f'{error}'}, status=status.HTTP_400_BAD_REQUEST)
     return Response({'message': 'Order created.'}, status=status.HTTP_201_CREATED)

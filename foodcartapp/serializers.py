@@ -19,10 +19,18 @@ class OrderSerializer(serializers.ModelSerializer):
     """Сериализатор модели Order."""
 
     address = serializers.CharField(required=True)
+    products = serializers.ListField(allow_empty=False)
 
     class Meta:
         model = Order
-        fields = ('address', )
+        fields = ('address', 'products')
+
+    def validate_products(self, value):
+        """Проверка поля products."""
+
+        if not isinstance(value[0], dict):
+            raise serializers.ValidationError('The list of products must contain dictionaries.')
+        return value
 
 
 class OrderedProductSerializer(serializers.ModelSerializer):
