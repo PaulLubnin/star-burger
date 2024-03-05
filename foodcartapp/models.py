@@ -1,5 +1,6 @@
 from django.core.validators import MinValueValidator
 from django.db import models
+from django.db.models import Sum, F
 from phonenumber_field.modelfields import PhoneNumberField
 
 
@@ -146,6 +147,13 @@ class Client(models.Model):
         return f'ID: {self.id}, {self.phonenumber}, {self.firstname} {self.lastname}'
 
 
+class OrderPriceQuerySet(models.QuerySet):
+    """Расширение стандартоного Manager() модели Order."""
+
+    def with_cost(self):
+        return self.annotate(cost=Sum(F('ordered_products__quantity')*F('ordered_products__product__price')))
+
+
 class Order(models.Model):
     """Заказ."""
 
@@ -158,6 +166,7 @@ class Order(models.Model):
         on_delete=models.CASCADE,
         related_name='orders'
     )
+    objects = OrderPriceQuerySet.as_manager()
 
     class Meta:
         verbose_name = 'Заказ'
@@ -168,7 +177,7 @@ class Order(models.Model):
 
 
 class OrderedProduct(models.Model):
-    """Элемент заказа."""
+    """Заказанные продукты."""
 
     order = models.ForeignKey(
         Order,
@@ -187,8 +196,8 @@ class OrderedProduct(models.Model):
     )
 
     class Meta:
-        verbose_name = 'Элемент заказа'
-        verbose_name_plural = 'Элементы заказа'
+        verbose_name = 'Заказанный продукт'
+        verbose_name_plural = 'Заказанные продукты'
 
     def __str__(self):
         return f'{self.product.name}, {self.order.client.firstname} {self.order.client.lastname} {self.order.address}'
