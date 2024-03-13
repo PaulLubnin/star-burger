@@ -194,6 +194,13 @@ class OrderedProduct(models.Model):
     quantity = models.PositiveIntegerField(
         'Количество'
     )
+    strike_price = models.DecimalField(
+        verbose_name='Цена расчёта',
+        max_digits=8,
+        decimal_places=2,
+        default=0,
+        validators=[MinValueValidator(0)]
+    )
 
     class Meta:
         verbose_name = 'Заказанный продукт'

@@ -92,7 +92,6 @@ class ProductAdmin(admin.ModelAdmin):
             '<img src="{url}" style="max-height: 200px;"/>',
             url=obj.image.url
         )
-
     get_image_preview.short_description = 'превью'
 
     def get_image_list_preview(self, obj):
@@ -104,7 +103,6 @@ class ProductAdmin(admin.ModelAdmin):
             edit_url=edit_url,
             src=obj.image.url
         )
-
     get_image_list_preview.short_description = 'превью'
 
 
@@ -120,7 +118,8 @@ class ClientAdmin(admin.ModelAdmin):
 
 class OrderedProductInline(admin.TabularInline):
     model = OrderedProduct
-    fields = ('product', 'quantity')
+    fields = ('product', 'quantity', 'strike_price')
+    readonly_fields = ('strike_price',)
 
 
 @admin.register(Order)
