@@ -70,8 +70,8 @@ def create_client_object(incoming_order: dict) -> object:
     client, created = Client.objects.get_or_create(
         phonenumber=phonenumber.as_e164,
         defaults={
-            'firstname': incoming_order.get('firstname'),
-            'lastname': incoming_order.get('lastname')
+            'firstname': client_serialization.data.get('firstname'),
+            'lastname': client_serialization.data.get('lastname')
         }
     )
     return client
@@ -81,6 +81,7 @@ def create_ordered_product_object(products: list, order: object):
     """Создание объекта OrderedProduct и добавление в Order."""
 
     for burger in products:
+        print('burger', burger)
         burger['order'] = order.pk
         product_serialization = OrderedProductSerializer(data=burger)
         product_serialization.is_valid(raise_exception=True)
@@ -94,11 +95,11 @@ def create_ordered_product_object(products: list, order: object):
 def create_order_object(incoming_order: dict, client: object) -> object:
     """Создание объекта Order и добавление его к объекту Client."""
 
-    order_serialization = OrderSerializer(data=incoming_order)
+    order_serialization = OrderSerializer(data={**incoming_order, **{'client_id': client.pk}})
     order_serialization.is_valid(raise_exception=True)
     new_order_object = Order.objects.create(
         client=client,
-        address=incoming_order.get('address'),
+        address=order_serialization.data.get('address'),
     )
     create_ordered_product_object(incoming_order.get('products'), new_order_object)
     return new_order_object

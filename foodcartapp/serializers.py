@@ -15,28 +15,10 @@ class ClientSerializer(serializers.ModelSerializer):
         fields = ('firstname', 'lastname', 'phonenumber')
 
 
-class OrderSerializer(serializers.ModelSerializer):
-    """Сериализатор модели Order."""
-
-    address = serializers.CharField(required=True)
-    products = serializers.ListField(allow_empty=False, read_only=True)
-
-    class Meta:
-        model = Order
-        fields = ('id', 'address', 'products')
-
-    def validate_products(self, value):
-        """Проверка поля products."""
-
-        if not isinstance(value[0], dict):
-            raise serializers.ValidationError('The list of products must contain dictionaries.')
-        return value
-
-
 class OrderedProductSerializer(serializers.ModelSerializer):
     """Сериализатор модели OrderedProduct."""
 
-    order = serializers.IntegerField(required=True)
+    order = serializers.IntegerField(required=False)
     product = serializers.IntegerField(required=True)
     quantity = serializers.IntegerField(required=True)
 
@@ -51,3 +33,15 @@ class OrderedProductSerializer(serializers.ModelSerializer):
         if value not in all_products:
             raise serializers.ValidationError(f'Invalid primary key "{value}".')
         return value
+
+
+class OrderSerializer(serializers.ModelSerializer):
+    """Сериализатор модели Order."""
+
+    address = serializers.CharField(required=True)
+    client_id = serializers.IntegerField(required=True)
+    products = OrderedProductSerializer(allow_empty=False, many=True, write_only=True)
+
+    class Meta:
+        model = Order
+        fields = ('id', 'client_id', 'address', 'products',)
