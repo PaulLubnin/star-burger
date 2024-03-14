@@ -81,14 +81,14 @@ def create_ordered_product_object(products: list, order: object):
     """Создание объекта OrderedProduct и добавление в Order."""
 
     for burger in products:
-        print('burger', burger)
         burger['order'] = order.pk
         product_serialization = OrderedProductSerializer(data=burger)
         product_serialization.is_valid(raise_exception=True)
         OrderedProduct.objects.create(
-            order_id=burger['order'],
-            product_id=burger['product'],
-            quantity=burger['quantity']
+            order_id=product_serialization.data.get('order'),
+            product_id=product_serialization.data.get('product'),
+            quantity=product_serialization.data.get('quantity'),
+            strike_price=Product.objects.values_list('price', flat=True).get(pk=product_serialization.data.get('product'))
         )
 
 

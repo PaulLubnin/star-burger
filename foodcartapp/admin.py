@@ -119,7 +119,6 @@ class ClientAdmin(admin.ModelAdmin):
 class OrderedProductInline(admin.TabularInline):
     model = OrderedProduct
     fields = ('product', 'quantity', 'strike_price')
-    readonly_fields = ('strike_price',)
 
 
 @admin.register(Order)

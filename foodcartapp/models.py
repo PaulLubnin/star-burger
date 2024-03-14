@@ -151,7 +151,7 @@ class OrderPriceQuerySet(models.QuerySet):
     """Расширение стандартоного Manager() модели Order."""
 
     def with_cost(self):
-        return self.annotate(cost=Sum(F('ordered_products__quantity')*F('ordered_products__product__price')))
+        return self.annotate(cost=Sum(F('ordered_products__quantity')*F('ordered_products__strike_price')))
 
 
 class Order(models.Model):
