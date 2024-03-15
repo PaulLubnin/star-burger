@@ -1,3 +1,4 @@
+from django.db import transaction
 from django.http import JsonResponse
 from django.templatetags.static import static
 from phonenumber_field.phonenumber import PhoneNumber
@@ -88,7 +89,8 @@ def create_ordered_product_object(products: list, order: object):
             order_id=product_serialization.data.get('order'),
             product_id=product_serialization.data.get('product'),
             quantity=product_serialization.data.get('quantity'),
-            strike_price=Product.objects.values_list('price', flat=True).get(pk=product_serialization.data.get('product'))
+            strike_price=Product.objects.values_list('price', flat=True).get(
+                pk=product_serialization.data.get('product'))
         )
 
 
@@ -111,9 +113,12 @@ def register_order(request):
 
     try:
         incoming_order = request.data
-        client = create_client_object(incoming_order)
-        order = create_order_object(incoming_order, client)
+        with transaction.atomic():
+            client = create_client_object(incoming_order)
+            order = create_order_object(incoming_order, client)
     except ValueError as error:
+        return Response({'error': f'{error}'}, status=status.HTTP_400_BAD_REQUEST)
+    except Exception as error:
         return Response({'error': f'{error}'}, status=status.HTTP_400_BAD_REQUEST)
     client_serializer = ClientSerializer(client)
     order_serializer = OrderSerializer(order)
