@@ -1,8 +1,11 @@
 from django.contrib import admin
-from django.shortcuts import reverse
+from django.shortcuts import reverse, redirect
 from django.templatetags.static import static
+from django.utils.encoding import iri_to_uri
 from django.utils.html import format_html
+from django.utils.http import url_has_allowed_host_and_scheme, is_safe_url
 
+from star_burger.settings import ALLOWED_HOSTS
 from .models import Product, Client, Order, OrderedProduct
 from .models import ProductCategory
 from .models import Restaurant
@@ -126,4 +129,12 @@ class OrderAdmin(admin.ModelAdmin):
     raw_id_fields = ('client',)
     search_fields = ('client', )
     inlines = (OrderedProductInline,)
+
+    def response_change(self, request, obj):
+        response = super(OrderAdmin, self).response_change(request, obj)
+        if 'next' in request.GET:
+            if is_safe_url(request.GET['next'], ALLOWED_HOSTS):
+                return redirect(request.GET['next'])
+        else:
+            return response
 
