@@ -45,3 +45,5 @@ class OrderSerializer(serializers.ModelSerializer):
     class Meta:
         model = Order
         fields = ('id', 'client_id', 'address', 'products',)
+
+# {"products": [{"product": 2, "quantity": 1}, {"product": 3, "quantity": 1}, {"product": 1, "quantity": 3}], "firstname": "Атомарная", "lastname": "Транзакция", "phonenumber": "+79191503241", "address": "База Данных"}

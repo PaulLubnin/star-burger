@@ -157,6 +157,12 @@ class OrderPriceQuerySet(models.QuerySet):
 class Order(models.Model):
     """Заказ."""
 
+    ORDER_STATUS = (
+        ('new_order', 'Новый заказ'),
+        ('cooking', 'Готовится'),
+        ('on_the_road', 'Передан курьеру'),
+        ('delivered', 'Доставлен')
+    )
     address = models.TextField(
         'Адрес доставки'
     )
@@ -165,6 +171,13 @@ class Order(models.Model):
         verbose_name='Клиент',
         on_delete=models.CASCADE,
         related_name='orders'
+    )
+    status = models.CharField(
+        'Статус заказа',
+        max_length=11,
+        choices=ORDER_STATUS,
+        default=ORDER_STATUS[0][0],
+        db_index=True
     )
     objects = OrderPriceQuerySet.as_manager()
 
