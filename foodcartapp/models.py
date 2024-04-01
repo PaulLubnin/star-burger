@@ -164,6 +164,11 @@ class Order(models.Model):
         ('on_the_road', 'Передан курьеру'),
         ('delivered', 'Доставлен')
     )
+    PAYMENT_TYPE = (
+        ('not_selected', 'Не выбрано'),
+        ('cash', 'Наличные'),
+        ('card', 'Электронно')
+    )
     address = models.TextField(
         'Адрес доставки'
     )
@@ -199,6 +204,13 @@ class Order(models.Model):
         'Дата доставки',
         blank=True,
         null=True,
+        db_index=True
+    )
+    payment = models.CharField(
+        'Способ оплаты',
+        max_length=12,
+        choices=PAYMENT_TYPE,
+        default=PAYMENT_TYPE[0][0],
         db_index=True
     )
     objects = OrderPriceQuerySet.as_manager()
