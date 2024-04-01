@@ -129,6 +129,7 @@ class OrderAdmin(admin.ModelAdmin):
     raw_id_fields = ('client',)
     search_fields = ('client', )
     inlines = (OrderedProductInline,)
+    fields = ('status', 'client', 'address', 'comment',)
 
     def response_change(self, request, obj):
         response = super(OrderAdmin, self).response_change(request, obj)

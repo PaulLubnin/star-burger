@@ -179,6 +179,10 @@ class Order(models.Model):
         default=ORDER_STATUS[0][0],
         db_index=True
     )
+    comment = models.TextField(
+        'Комментарий',
+        blank=True
+    )
     objects = OrderPriceQuerySet.as_manager()
 
     class Meta:
