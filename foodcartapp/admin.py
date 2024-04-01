@@ -129,7 +129,11 @@ class OrderAdmin(admin.ModelAdmin):
     raw_id_fields = ('client',)
     search_fields = ('client', )
     inlines = (OrderedProductInline,)
-    fields = ('status', 'client', 'address', 'comment',)
+    readonly_fields = ('registrated_at',)
+    fieldsets = (
+        ('Данные заказа', {'fields': ('status', 'client', 'address', 'comment')}),
+        ('Даты обработки заказа', {'fields': ('registrated_at', 'called_at', 'delivery_at')})
+    )
 
     def response_change(self, request, obj):
         response = super(OrderAdmin, self).response_change(request, obj)
