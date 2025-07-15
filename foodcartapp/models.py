@@ -93,6 +93,13 @@ class Product(models.Model):
         return self.name
 
 
+class RestaurantMenuItemQuerySet(models.QuerySet):
+    """Расширение стандартоного Manager() модели RestaurantMenuItem."""
+
+    def available_in(self):
+        return self.filter(availability=True).prefetch_related('restaurant')
+
+
 class RestaurantMenuItem(models.Model):
     restaurant = models.ForeignKey(
         Restaurant,
@@ -111,6 +118,7 @@ class RestaurantMenuItem(models.Model):
         default=True,
         db_index=True
     )
+    objects = RestaurantMenuItemQuerySet.as_manager()
 
     class Meta:
         verbose_name = 'пункт меню ресторана'
@@ -148,11 +156,32 @@ class Client(models.Model):
         return f'ID: {self.id}, {self.phonenumber}, {self.firstname} {self.lastname}'
 
 
-class OrderPriceQuerySet(models.QuerySet):
+class OrderQuerySet(models.QuerySet):
     """Расширение стандартоного Manager() модели Order."""
 
     def with_cost(self):
+        """Заказы со стоимостью."""
+
         return self.annotate(cost=Sum(F('ordered_products__quantity')*F('ordered_products__strike_price')))
+
+    def with_capable_restaurants(self):
+        """Заказы с ресторанами, которые могут выполнить заказ."""
+
+        orders = self
+        for order in orders:
+            can_cook = {}
+            for burger in order.ordered_products.all():
+                can_cook[burger.product] = [elem.restaurant for elem in burger.product.menu_items.available_in()]
+
+            sets_lists_restaurants = [set(sublist) for sublist in can_cook.values()]
+            who_can_cook = list(set.intersection(*sets_lists_restaurants))
+
+            if not order.executing_restaurant:
+                order.capable_restaurants = sorted(
+                    [restaurant.name for restaurant in who_can_cook],
+                    key=lambda restaurant_name: restaurant_name.lower()
+                )
+        return orders
 
 
 class Order(models.Model):
@@ -185,6 +214,14 @@ class Order(models.Model):
         default=ORDER_STATUS[0][0],
         db_index=True
     )
+    executing_restaurant = models.ForeignKey(
+        Restaurant,
+        verbose_name='Исполняющий ресторан',
+        related_name='orders',
+        on_delete=models.SET_NULL,
+        blank=True,
+        null=True
+    )
     comment = models.TextField(
         'Комментарий',
         blank=True
@@ -213,7 +250,7 @@ class Order(models.Model):
         default=PAYMENT_TYPE[0][0],
         db_index=True
     )
-    objects = OrderPriceQuerySet.as_manager()
+    objects = OrderQuerySet.as_manager()
 
     class Meta:
         verbose_name = 'Заказ'
@@ -254,4 +291,4 @@ class OrderedProduct(models.Model):
         verbose_name_plural = 'Заказанные продукты'
 
     def __str__(self):
-        return f'{self.product.name}, {self.order.client.firstname} {self.order.client.lastname} {self.order.address}'
+        return self.product.name

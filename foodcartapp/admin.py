@@ -131,7 +131,7 @@ class OrderAdmin(admin.ModelAdmin):
     inlines = (OrderedProductInline,)
     readonly_fields = ('registrated_at',)
     fieldsets = (
-        ('Данные заказа', {'fields': ('status', 'client', 'payment', 'address', 'comment')}),
+        ('Данные заказа', {'fields': ('status', 'client', 'payment', 'executing_restaurant', 'address', 'comment')}),
         ('Даты обработки заказа', {'fields': ('registrated_at', 'called_at', 'delivery_at')})
     )
 

@@ -85,8 +85,7 @@ def view_restaurants(request):
 def view_orders(request):
     """Вывод заказов в таблицу."""
 
-    orders = Order.objects.with_cost().select_related('client').order_by('-id')
-
+    orders = Order.objects.with_cost().select_related('client').order_by('-id').with_capable_restaurants()
     return render(request, template_name='order_items.html', context={
         'orders': orders
     })

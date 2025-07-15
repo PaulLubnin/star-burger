@@ -116,9 +116,7 @@ def register_order(request):
         with transaction.atomic():
             client = create_client_object(incoming_order)
             order = create_order_object(incoming_order, client)
-    except ValueError as error:
-        return Response({'error': f'{error}'}, status=status.HTTP_400_BAD_REQUEST)
-    except Exception as error:
+    except (ValueError, Exception) as error:
         return Response({'error': f'{error}'}, status=status.HTTP_400_BAD_REQUEST)
     client_serializer = ClientSerializer(client)
     order_serializer = OrderSerializer(order)
