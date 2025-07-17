@@ -1,6 +1,6 @@
 from django.core.validators import MinValueValidator
 from django.db import models
-from django.db.models import Sum, F
+from django.db.models import Sum, F, Case, When, IntegerField
 from django.utils import timezone
 from phonenumber_field.modelfields import PhoneNumberField
 
@@ -159,6 +159,20 @@ class Client(models.Model):
 class OrderQuerySet(models.QuerySet):
     """Расширение стандартоного Manager() модели Order."""
 
+    def with_status_ordering(self):
+        """Сортировка по статусу."""
+
+        return self.order_by(
+            Case(
+                When(status=Order.STATUS_NEW, then=1),
+                When(status=Order.STATUS_COOKING, then=2),
+                When(status=Order.STATUS_ON_ROAD, then=3),
+                When(status=Order.STATUS_DELIVERED, then=4),
+                default=0,
+                output_field=IntegerField()
+            )
+        )
+
     def with_cost(self):
         """Заказы со стоимостью."""
 
@@ -187,11 +201,16 @@ class OrderQuerySet(models.QuerySet):
 class Order(models.Model):
     """Заказ."""
 
+    STATUS_NEW = 'new_order'
+    STATUS_COOKING = 'cooking'
+    STATUS_ON_ROAD = 'on_the_road'
+    STATUS_DELIVERED = 'delivered'
+
     ORDER_STATUS = (
-        ('new_order', 'Новый заказ'),
-        ('cooking', 'Готовится'),
-        ('on_the_road', 'Передан курьеру'),
-        ('delivered', 'Доставлен')
+        (STATUS_NEW, 'Новый заказ'),
+        (STATUS_COOKING, 'Готовится'),
+        (STATUS_ON_ROAD, 'Передан курьеру'),
+        (STATUS_DELIVERED, 'Доставлен')
     )
     PAYMENT_TYPE = (
         ('not_selected', 'Не выбрано'),
