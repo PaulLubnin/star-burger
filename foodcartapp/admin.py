@@ -138,6 +138,10 @@ class OrderAdmin(admin.ModelAdmin):
     def response_change(self, request, obj):
         response = super(OrderAdmin, self).response_change(request, obj)
         if 'next' in request.GET:
+            # todo: неверная логика присвоение статуса "готовится", не учитываеются другие статусы
+            if obj.executing_restaurant and obj.status != obj.STATUS_COOKING:
+                obj.status = obj.STATUS_COOKING
+                obj.save(update_fields=('status',))
             if is_safe_url(request.GET['next'], ALLOWED_HOSTS):
                 return redirect(request.GET['next'])
         else:
