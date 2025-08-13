@@ -1,6 +1,6 @@
 from django.core.validators import MinValueValidator
 from django.db import models
-from django.db.models import Sum, F, Case, When, IntegerField
+from django.db.models import Sum, F, Case, When, IntegerField, Prefetch
 from django.utils import timezone
 from phonenumber_field.modelfields import PhoneNumberField
 
@@ -104,7 +104,7 @@ class RestaurantMenuItem(models.Model):
     restaurant = models.ForeignKey(
         Restaurant,
         related_name='menu_items',
-        verbose_name="ресторан",
+        verbose_name='ресторан',
         on_delete=models.CASCADE,
     )
     product = models.ForeignKey(
@@ -181,11 +181,14 @@ class OrderQuerySet(models.QuerySet):
     def with_capable_restaurants(self):
         """Заказы с ресторанами, которые могут выполнить заказ."""
 
-        orders = self
+        orders = self.prefetch_related(Prefetch(
+            'ordered_products__product__menu_items',
+            queryset=RestaurantMenuItem.objects.filter(availability=True).select_related('restaurant')
+        ))
         for order in orders:
             can_cook = {}
             for burger in order.ordered_products.all():
-                can_cook[burger.product] = [elem.restaurant for elem in burger.product.menu_items.available_in()]
+                can_cook[burger.product] = [elem.restaurant for elem in burger.product.menu_items.all()]
 
             sets_lists_restaurants = [set(sublist) for sublist in can_cook.values()]
             who_can_cook = list(set.intersection(*sets_lists_restaurants))

@@ -2,11 +2,12 @@ from django import forms
 from django.contrib.auth import authenticate, login
 from django.contrib.auth import views as auth_views
 from django.contrib.auth.decorators import user_passes_test
+from django.db.models import Prefetch
 from django.shortcuts import redirect, render
 from django.urls import reverse_lazy
 from django.views import View
 
-from foodcartapp.models import Product, Restaurant, Order
+from foodcartapp.models import Product, Restaurant, Order, OrderedProduct
 
 
 class Login(forms.Form):
@@ -83,11 +84,14 @@ def view_restaurants(request):
 def view_orders(request):
     """Вывод заказов в таблицу."""
 
-    orders = Order.objects.with_cost()\
-        .select_related('client')\
-        .order_by('-id')\
-        .with_capable_restaurants()\
-        .with_status_ordering()
+    orders = Order.objects.select_related('client', 'executing_restaurant') \
+        .prefetch_related(Prefetch(
+            'ordered_products',
+            queryset=OrderedProduct.objects.select_related('product')
+        )) \
+        .with_cost() \
+        .with_status_ordering() \
+        .with_capable_restaurants()
 
     return render(request, template_name='order_items.html', context={
         'orders': orders
