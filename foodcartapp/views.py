@@ -1,3 +1,4 @@
+import requests
 from django.db import transaction
 from django.http import JsonResponse
 from django.templatetags.static import static
@@ -6,6 +7,7 @@ from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
+from star_burger.settings import YANDEX_API_KEY
 from .models import Product, Order, Client, OrderedProduct
 from .serializers import ClientSerializer, OrderSerializer, OrderedProductSerializer
 
@@ -99,12 +101,41 @@ def create_order_object(incoming_order: dict, client: object) -> object:
 
     order_serialization = OrderSerializer(data={**incoming_order, **{'client_id': client.pk}})
     order_serialization.is_valid(raise_exception=True)
+    address = order_serialization.data.get('address')
+    longitude, latitude = fetch_coordinates(YANDEX_API_KEY, address)
     new_order_object = Order.objects.create(
         client=client,
-        address=order_serialization.data.get('address'),
+        address=address,
+        longitude=longitude,
+        latitude=latitude
     )
     create_ordered_product_object(incoming_order.get('products'), new_order_object)
     return new_order_object
+
+
+def fetch_coordinates(api_key: str, address: str) -> tuple:
+    """Получение координат."""
+
+    base_url = 'https://geocode-maps.yandex.ru/1.x'
+    response = requests.get(base_url, params={
+        'geocode': address,
+        'apikey': api_key,
+        'format': 'json',
+    })
+    response.raise_for_status()
+    found_places = response.json()['response']['GeoObjectCollection']['featureMember']
+
+    if not found_places:
+        return None, None
+
+    most_relevant = found_places[0]['GeoObject']
+    precision = most_relevant['metaDataProperty']['GeocoderMetaData'].get('precision')
+
+    if precision not in ('exact', 'number', 'near', 'street'):
+        return None, None
+
+    longitude, latitude = most_relevant['GeoObject']['Point']['pos'].split(" ")
+    return longitude, latitude
 
 
 @api_view(http_method_names=('POST',))
@@ -118,7 +149,7 @@ def register_order(request):
             order = create_order_object(incoming_order, client)
     except (ValueError, Exception) as error:
         return Response({'error': f'{error}'}, status=status.HTTP_400_BAD_REQUEST)
-    client_serializer = ClientSerializer(client)
-    order_serializer = OrderSerializer(order)
-    client_order = {**{'id': order_serializer.data.get('id')}, **client_serializer.data}
+    client_serialized = ClientSerializer(client)
+    order_serialized = OrderSerializer(order)
+    client_order = {**{'id': order_serialized.data.get('id')}, **client_serialized.data}
     return Response(client_order, status=status.HTTP_201_CREATED)

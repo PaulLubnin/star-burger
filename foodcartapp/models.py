@@ -1,8 +1,9 @@
-from django.core.validators import MinValueValidator
+from django.core.validators import MinValueValidator, MaxValueValidator
 from django.db import models
 from django.db.models import Sum, F, Case, When, IntegerField, Prefetch
 from django.utils import timezone
 from phonenumber_field.modelfields import PhoneNumberField
+from geopy.distance import distance
 
 
 class Restaurant(models.Model):
@@ -19,6 +20,22 @@ class Restaurant(models.Model):
         'контактный телефон',
         max_length=50,
         blank=True,
+    )
+    longitude = models.DecimalField(
+        verbose_name='Долгота',
+        max_digits=9,
+        decimal_places=6,
+        validators=[MinValueValidator(-90), MaxValueValidator(90)],
+        blank=False,
+        null=False
+    )
+    latitude = models.DecimalField(
+        verbose_name='Широта',
+        max_digits=9,
+        decimal_places=6,
+        validators=[MinValueValidator(-180), MaxValueValidator(180)],
+        blank=False,
+        null=False
     )
 
     class Meta:
@@ -179,7 +196,7 @@ class OrderQuerySet(models.QuerySet):
         return self.annotate(cost=Sum(F('ordered_products__quantity')*F('ordered_products__strike_price')))
 
     def with_capable_restaurants(self):
-        """Заказы с ресторанами, которые могут выполнить заказ."""
+        """Заказы с ресторанами, которые могут выполнить заказ и расстояние до клиента."""
 
         orders = self.prefetch_related(Prefetch(
             'ordered_products__product__menu_items',
@@ -194,10 +211,18 @@ class OrderQuerySet(models.QuerySet):
             who_can_cook = list(set.intersection(*sets_lists_restaurants))
 
             if not order.executing_restaurant:
-                order.capable_restaurants = sorted(
-                    [restaurant.name for restaurant in who_can_cook],
-                    key=lambda restaurant_name: restaurant_name.lower()
-                )
+                if not order.longitude or not order.latitude:
+                    order.capable_restaurants = sorted(
+                        [(restaurant.name, None) for restaurant in who_can_cook],
+                        key=lambda elem: elem[0].lower()
+                    )
+                else:
+                    order_coordinates = (order.latitude, order.longitude)
+                    order.capable_restaurants = sorted(
+                        [(restaurant.name,
+                         round(distance(order_coordinates, (restaurant.latitude, restaurant.longitude)).km, 1))
+                         for restaurant in who_can_cook],
+                        key=lambda elem: elem[1])
         return orders
 
 
@@ -272,6 +297,23 @@ class Order(models.Model):
         default=PAYMENT_TYPE[0][0],
         db_index=True
     )
+    longitude = models.DecimalField(
+        verbose_name='Долгота',
+        max_digits=9,
+        decimal_places=6,
+        validators=[MinValueValidator(-90), MaxValueValidator(90)],
+        blank=True,
+        null=True
+    )
+    latitude = models.DecimalField(
+        verbose_name='Широта',
+        max_digits=9,
+        decimal_places=6,
+        validators=[MinValueValidator(-180), MaxValueValidator(180)],
+        blank=True,
+        null=True
+    )
+
     objects = OrderQuerySet.as_manager()
 
     class Meta:
