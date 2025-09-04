@@ -7,6 +7,7 @@ from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
+from geoplaces.views import create_place_object
 from star_burger.settings import YANDEX_API_KEY
 from .models import Product, Order, Client, OrderedProduct
 from .serializers import ClientSerializer, OrderSerializer, OrderedProductSerializer
@@ -64,7 +65,7 @@ def product_list_api(request):
     })
 
 
-def create_client_object(incoming_order: dict) -> object:
+def create_client_object(incoming_order: dict) -> Client:
     """Создание объекта Client."""
 
     client_serialization = ClientSerializer(data=incoming_order)
@@ -80,7 +81,7 @@ def create_client_object(incoming_order: dict) -> object:
     return client
 
 
-def create_ordered_product_object(products: list, order: object):
+def create_ordered_product_object(products: list, order: Order):
     """Создание объекта OrderedProduct и добавление в Order."""
 
     for burger in products:
@@ -92,11 +93,12 @@ def create_ordered_product_object(products: list, order: object):
             product_id=product_serialization.data.get('product'),
             quantity=product_serialization.data.get('quantity'),
             strike_price=Product.objects.values_list('price', flat=True).get(
-                pk=product_serialization.data.get('product'))
+                pk=product_serialization.data.get('product')
+            )
         )
 
 
-def create_order_object(incoming_order: dict, client: object) -> object:
+def create_order_object(incoming_order: dict, client: Client) -> Order:
     """Создание объекта Order и добавление его к объекту Client."""
 
     order_serialization = OrderSerializer(data={**incoming_order, **{'client_id': client.pk}})
@@ -147,6 +149,7 @@ def register_order(request):
         with transaction.atomic():
             client = create_client_object(incoming_order)
             order = create_order_object(incoming_order, client)
+            place = create_place_object(order)  # дописать метод
     except (ValueError, Exception) as error:
         return Response({'error': f'{error}'}, status=status.HTTP_400_BAD_REQUEST)
     client_serialized = ClientSerializer(client)

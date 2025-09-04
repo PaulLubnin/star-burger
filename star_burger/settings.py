@@ -26,6 +26,7 @@ INSTALLED_APPS = [
 
     'foodcartapp.apps.FoodcartappConfig',
     'restaurateur.apps.RestaurateurConfig',
+    'geoplaces.apps.GeoplacesConfig',
 
     'debug_toolbar',
     'phonenumber_field',
