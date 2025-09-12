@@ -1,6 +1,8 @@
 from foodcartapp.models import Order
 from geoplaces.models import Place
 
+CITY = 'Moscow'
+
 
 def get_normalized_address(dirty_address: str) -> str:
     """Нормализация адреса полученного от клиента."""

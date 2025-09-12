@@ -7,11 +7,14 @@ class Place(models.Model):
     """Сохраненные места и координаты места."""
 
     raw_address = models.CharField(
-        verbose_name='Изначальный адрес введёный клиентом'
+        verbose_name='Изначальный адрес введёный клиентом',
+        max_length=150
     )
     normalized_address = models.CharField(
         verbose_name='Нормализованный адрес',
-        unique=True
+        max_length=150,
+        unique=True,
+        db_index=True
     )
     longitude = models.DecimalField(
         verbose_name='Долгота',
@@ -42,3 +45,10 @@ class Place(models.Model):
         null=True,
         db_index=True
     )
+
+    class Meta:
+        verbose_name = 'Геоточка'
+        verbose_name_plural = 'Геоточки'
+
+    def __str__(self):
+        return self.normalized_address

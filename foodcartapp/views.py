@@ -67,10 +67,14 @@ def product_list_api(request):
 
 def create_client_object(incoming_order: dict) -> Client:
     """Создание объекта Client."""
-
+    print('------create_client_object')
+    print('***1')
     client_serialization = ClientSerializer(data=incoming_order)
+    print('***2')
     client_serialization.is_valid(raise_exception=True)
+    print('***3')
     phonenumber = PhoneNumber.from_string(incoming_order.get('phonenumber'), region='RU')
+    print('***4')
     client, created = Client.objects.get_or_create(
         phonenumber=phonenumber.as_e164,
         defaults={
@@ -100,43 +104,59 @@ def create_ordered_product_object(products: list, order: Order):
 
 def create_order_object(incoming_order: dict, client: Client) -> Order:
     """Создание объекта Order и добавление его к объекту Client."""
-
+    print('-----create_order_object')
+    print('***1')
     order_serialization = OrderSerializer(data={**incoming_order, **{'client_id': client.pk}})
+    print('***2')
     order_serialization.is_valid(raise_exception=True)
+    print('***3')
     address = order_serialization.data.get('address')
+    print('***4')
     longitude, latitude = fetch_coordinates(YANDEX_API_KEY, address)
+    print('***5')
     new_order_object = Order.objects.create(
         client=client,
         address=address,
         longitude=longitude,
         latitude=latitude
     )
+    print('***6')
     create_ordered_product_object(incoming_order.get('products'), new_order_object)
     return new_order_object
 
 
 def fetch_coordinates(api_key: str, address: str) -> tuple:
     """Получение координат."""
-
+    print('-----fetch_coordinates')
+    print('***1')
     base_url = 'https://geocode-maps.yandex.ru/1.x'
+    print('***2')
     response = requests.get(base_url, params={
         'geocode': address,
         'apikey': api_key,
         'format': 'json',
     })
+    print('***3')
     response.raise_for_status()
+    print('***4')
     found_places = response.json()['response']['GeoObjectCollection']['featureMember']
-
+    print('-found_places:', found_places)
+    print('---')
+    print('-response.json()', response.json())
+    print('***5')
     if not found_places:
         return None, None
-
-    most_relevant = found_places[0]['GeoObject']
-    precision = most_relevant['metaDataProperty']['GeocoderMetaData'].get('precision')
-
-    if precision not in ('exact', 'number', 'near', 'street'):
-        return None, None
-
+    print('***6')
+    most_relevant = found_places[0]
+    # most_relevant = found_places[0]['GeoObject']
+    # print('***7')
+    # precision = most_relevant['metaDataProperty']['GeocoderMetaData'].get('precision')
+    # print('***8')
+    # if precision not in ('exact', 'number', 'near', 'street'):
+    #     return None, None
+    print('***9')
     longitude, latitude = most_relevant['GeoObject']['Point']['pos'].split(" ")
+    print('=====fetch_coordinates')
     return longitude, latitude
 
 
@@ -146,9 +166,13 @@ def register_order(request):
 
     try:
         incoming_order = request.data
+        print('incoming_order', request.data)
         with transaction.atomic():
+            print('***client')
             client = create_client_object(incoming_order)
+            print('client', client)
             order = create_order_object(incoming_order, client)
+            print('order', order)
             place = create_place_object(order)  # дописать метод
     except (ValueError, Exception) as error:
         return Response({'error': f'{error}'}, status=status.HTTP_400_BAD_REQUEST)

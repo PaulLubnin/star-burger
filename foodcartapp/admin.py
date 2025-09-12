@@ -130,9 +130,14 @@ class OrderAdmin(admin.ModelAdmin):
     search_fields = ('client', )
     inlines = (OrderedProductInline,)
     readonly_fields = ('registrated_at',)
+    #todo: убрать потом широту и долготу
     fieldsets = (
-        ('Данные заказа', {'fields': ('status', 'client', 'payment', 'executing_restaurant', 'address', 'comment')}),
-        ('Даты обработки заказа', {'fields': ('registrated_at', 'called_at', 'delivery_at')})
+        ('Данные заказа', {'fields': (
+            'status', 'client', 'payment', 'executing_restaurant', ('address', 'longitude', 'latitude'), 'comment'
+        )}),
+        ('Даты обработки заказа', {'fields': (
+            'registrated_at', 'called_at', 'delivery_at'
+        )})
     )
 
     def response_change(self, request, obj):
