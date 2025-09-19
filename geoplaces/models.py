@@ -51,4 +51,4 @@ class Place(models.Model):
         verbose_name_plural = 'Геоточки'
 
     def __str__(self):
-        return self.normalized_address
+        return f'{self.id}: {self.normalized_address}'

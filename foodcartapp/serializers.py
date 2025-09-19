@@ -45,3 +45,11 @@ class OrderSerializer(serializers.ModelSerializer):
     class Meta:
         model = Order
         fields = ('id', 'client_id', 'address', 'products',)
+
+    def validated_address(self, value):
+        """Проверка адреса: город, улица, дом."""
+
+        elems = [elem.strip() for elem in value.split(',')]
+        if len(elems) < 3:
+            raise serializers.ValidationError(f'Введите адрес в формате: Город, улица, дом')
+        return value

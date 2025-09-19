@@ -1,4 +1,3 @@
-import requests
 from django.db import transaction
 from django.http import JsonResponse
 from django.templatetags.static import static
@@ -7,7 +6,7 @@ from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
-from geoplaces.views import create_place_object
+from geoplaces.views import get_or_create_place_object
 from star_burger.settings import YANDEX_API_KEY
 from .models import Product, Order, Client, OrderedProduct
 from .serializers import ClientSerializer, OrderSerializer, OrderedProductSerializer
@@ -67,21 +66,19 @@ def product_list_api(request):
 
 def create_client_object(incoming_order: dict) -> Client:
     """Создание объекта Client."""
-    print('------create_client_object')
-    print('***1')
+    print('>>> create_client_object')
     client_serialization = ClientSerializer(data=incoming_order)
-    print('***2')
     client_serialization.is_valid(raise_exception=True)
-    print('***3')
+    client_data = client_serialization.validated_data
     phonenumber = PhoneNumber.from_string(incoming_order.get('phonenumber'), region='RU')
-    print('***4')
     client, created = Client.objects.get_or_create(
         phonenumber=phonenumber.as_e164,
         defaults={
-            'firstname': client_serialization.data.get('firstname'),
-            'lastname': client_serialization.data.get('lastname')
+            'firstname': client_data.get('firstname'),
+            'lastname': client_data.get('lastname')
         }
     )
+    print('<<< create_client_object')
     return client
 
 
@@ -92,91 +89,52 @@ def create_ordered_product_object(products: list, order: Order):
         burger['order'] = order.pk
         product_serialization = OrderedProductSerializer(data=burger)
         product_serialization.is_valid(raise_exception=True)
+        product_data = product_serialization.validated_data
         OrderedProduct.objects.create(
-            order_id=product_serialization.data.get('order'),
-            product_id=product_serialization.data.get('product'),
-            quantity=product_serialization.data.get('quantity'),
+            order_id=product_data.get('order'),
+            product_id=product_data.get('product'),
+            quantity=product_data.get('quantity'),
             strike_price=Product.objects.values_list('price', flat=True).get(
-                pk=product_serialization.data.get('product')
+                pk=product_data.get('product')
             )
         )
 
 
 def create_order_object(incoming_order: dict, client: Client) -> Order:
     """Создание объекта Order и добавление его к объекту Client."""
-    print('-----create_order_object')
-    print('***1')
+    print('>>> create_order_object')
     order_serialization = OrderSerializer(data={**incoming_order, **{'client_id': client.pk}})
-    print('***2')
-    order_serialization.is_valid(raise_exception=True)
-    print('***3')
-    address = order_serialization.data.get('address')
-    print('***4')
-    longitude, latitude = fetch_coordinates(YANDEX_API_KEY, address)
-    print('***5')
+    print('***order_serialization')
+    if order_serialization.is_valid(raise_exception=True):
+        print(order_serialization.errors)
+        print(order_serialization.error_messages)
+    print('***order_serialization.is_valid')
+    address = order_serialization.validated_data.get('address')
+    print('***address')
+    place = get_or_create_place_object(address, YANDEX_API_KEY)
+    print('***place')
     new_order_object = Order.objects.create(
         client=client,
         address=address,
-        longitude=longitude,
-        latitude=latitude
+        longitude=place.longitude,
+        latitude=place.latitude
     )
-    print('***6')
     create_ordered_product_object(incoming_order.get('products'), new_order_object)
+    print('<<< create_order_object')
     return new_order_object
-
-
-def fetch_coordinates(api_key: str, address: str) -> tuple:
-    """Получение координат."""
-    print('-----fetch_coordinates')
-    print('***1')
-    base_url = 'https://geocode-maps.yandex.ru/1.x'
-    print('***2')
-    response = requests.get(base_url, params={
-        'geocode': address,
-        'apikey': api_key,
-        'format': 'json',
-    })
-    print('***3')
-    response.raise_for_status()
-    print('***4')
-    found_places = response.json()['response']['GeoObjectCollection']['featureMember']
-    print('-found_places:', found_places)
-    print('---')
-    print('-response.json()', response.json())
-    print('***5')
-    if not found_places:
-        return None, None
-    print('***6')
-    most_relevant = found_places[0]
-    # most_relevant = found_places[0]['GeoObject']
-    # print('***7')
-    # precision = most_relevant['metaDataProperty']['GeocoderMetaData'].get('precision')
-    # print('***8')
-    # if precision not in ('exact', 'number', 'near', 'street'):
-    #     return None, None
-    print('***9')
-    longitude, latitude = most_relevant['GeoObject']['Point']['pos'].split(" ")
-    print('=====fetch_coordinates')
-    return longitude, latitude
 
 
 @api_view(http_method_names=('POST',))
 def register_order(request):
     """Форма регистрации заказа."""
 
+    incoming_order = request.data
     try:
-        incoming_order = request.data
-        print('incoming_order', request.data)
         with transaction.atomic():
-            print('***client')
             client = create_client_object(incoming_order)
-            print('client', client)
             order = create_order_object(incoming_order, client)
-            print('order', order)
-            place = create_place_object(order)  # дописать метод
     except (ValueError, Exception) as error:
         return Response({'error': f'{error}'}, status=status.HTTP_400_BAD_REQUEST)
     client_serialized = ClientSerializer(client)
-    order_serialized = OrderSerializer(order)
-    client_order = {**{'id': order_serialized.data.get('id')}, **client_serialized.data}
+    client_order = {'id': order.id, **client_serialized.data}
     return Response(client_order, status=status.HTTP_201_CREATED)
