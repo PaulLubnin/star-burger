@@ -1,11 +1,12 @@
 from django.contrib import admin
+from django.db import transaction
 from django.shortcuts import reverse, redirect
 from django.templatetags.static import static
-from django.utils.encoding import iri_to_uri
 from django.utils.html import format_html
-from django.utils.http import url_has_allowed_host_and_scheme, is_safe_url
+from django.utils.http import is_safe_url
 
-from star_burger.settings import ALLOWED_HOSTS
+from geoplaces.views import get_or_create_place_object
+from star_burger.settings import ALLOWED_HOSTS, YANDEX_API_KEY
 from .models import Product, Client, Order, OrderedProduct
 from .models import ProductCategory
 from .models import Restaurant
@@ -95,6 +96,7 @@ class ProductAdmin(admin.ModelAdmin):
             '<img src="{url}" style="max-height: 200px;"/>',
             url=obj.image.url
         )
+
     get_image_preview.short_description = 'превью'
 
     def get_image_list_preview(self, obj):
@@ -106,6 +108,7 @@ class ProductAdmin(admin.ModelAdmin):
             edit_url=edit_url,
             src=obj.image.url
         )
+
     get_image_list_preview.short_description = 'превью'
 
 
@@ -127,20 +130,33 @@ class OrderedProductInline(admin.TabularInline):
 @admin.register(Order)
 class OrderAdmin(admin.ModelAdmin):
     raw_id_fields = ('client',)
-    search_fields = ('client', )
+    search_fields = ('client',)
     inlines = (OrderedProductInline,)
     readonly_fields = ('registrated_at',)
-    #todo: убрать потом широту и долготу
+
     fieldsets = (
         ('Данные заказа', {'fields': (
-            'status', 'client', 'payment', 'executing_restaurant', ('address', 'longitude', 'latitude'), 'comment'
+            'status', 'client', 'payment', 'executing_restaurant', 'address', 'comment'
         )}),
         ('Даты обработки заказа', {'fields': (
             'registrated_at', 'called_at', 'delivery_at'
         )})
     )
 
+    def save_model(self, request, obj, form, change):
+        """Сохранение объекта после изменения поля Адрес."""
+
+        if change and 'address' in form.changed_data:
+            with transaction.atomic():
+                place = get_or_create_place_object(obj.address, YANDEX_API_KEY)
+                obj.longitude = place.longitude
+                obj.latitude = place.latitude
+                obj.save(update_fields=('address', 'longitude', 'latitude'))
+        super().save_model(request, obj, form, change)
+
     def response_change(self, request, obj):
+        """Возвращение на страницу с заказами после изменения Order."""
+
         response = super(OrderAdmin, self).response_change(request, obj)
         if 'next' in request.GET:
             if obj.executing_restaurant and obj.status != obj.STATUS_COOKING:
@@ -153,4 +169,3 @@ class OrderAdmin(admin.ModelAdmin):
                 return redirect(request.GET['next'])
         else:
             return response
-

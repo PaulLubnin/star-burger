@@ -29,17 +29,14 @@ def fetch_coordinates(api_key: str, address: str) -> tuple:
 
 def get_or_create_place_object(dirty_address: str, api_key: str) -> Place:
     """Создание объекта Place, если нету, то получаем данные из апи."""
-    print('>>> get_or_create_place_object')
-    city, street, house = map(str.strip, dirty_address.split(',', 2))
-    print('***city, street, house: ', city, street, house)
 
-    #TODO: починить запрос к базе, не работает поиск по номеру дома
+    city, street, house = map(str.strip, dirty_address.split(',', 2))
     place = Place.objects.filter(
         Q(raw_address__icontains=city) &
         Q(raw_address__icontains=street) &
         Q(raw_address__iregex=rf'(?<!\w){re.escape(house)}(?!\w)')
     ).order_by('id').first()
-    print('*place', place)
+
     if not place:
         longitude, latitude, formatted_address = fetch_coordinates(api_key, dirty_address)
         place = Place.objects.create(
@@ -48,7 +45,5 @@ def get_or_create_place_object(dirty_address: str, api_key: str) -> Place:
             longitude=longitude,
             latitude=latitude,
         )
-        print('<<< if get_or_create_place_object')
         return place
-    print('<<< get_or_create_place_object')
     return place

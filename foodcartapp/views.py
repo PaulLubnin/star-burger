@@ -66,7 +66,7 @@ def product_list_api(request):
 
 def create_client_object(incoming_order: dict) -> Client:
     """Создание объекта Client."""
-    print('>>> create_client_object')
+
     client_serialization = ClientSerializer(data=incoming_order)
     client_serialization.is_valid(raise_exception=True)
     client_data = client_serialization.validated_data
@@ -78,7 +78,7 @@ def create_client_object(incoming_order: dict) -> Client:
             'lastname': client_data.get('lastname')
         }
     )
-    print('<<< create_client_object')
+
     return client
 
 
@@ -102,17 +102,11 @@ def create_ordered_product_object(products: list, order: Order):
 
 def create_order_object(incoming_order: dict, client: Client) -> Order:
     """Создание объекта Order и добавление его к объекту Client."""
-    print('>>> create_order_object')
+
     order_serialization = OrderSerializer(data={**incoming_order, **{'client_id': client.pk}})
-    print('***order_serialization')
-    if order_serialization.is_valid(raise_exception=True):
-        print(order_serialization.errors)
-        print(order_serialization.error_messages)
-    print('***order_serialization.is_valid')
+    order_serialization.is_valid(raise_exception=True)
     address = order_serialization.validated_data.get('address')
-    print('***address')
     place = get_or_create_place_object(address, YANDEX_API_KEY)
-    print('***place')
     new_order_object = Order.objects.create(
         client=client,
         address=address,
@@ -120,7 +114,6 @@ def create_order_object(incoming_order: dict, client: Client) -> Order:
         latitude=place.latitude
     )
     create_ordered_product_object(incoming_order.get('products'), new_order_object)
-    print('<<< create_order_object')
     return new_order_object
 
 

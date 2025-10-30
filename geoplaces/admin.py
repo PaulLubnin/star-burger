@@ -5,4 +5,4 @@ from geoplaces.models import Place
 
 @admin.register(Place)
 class PlaceAdmin(admin.ModelAdmin):
-    pass
+    readonly_fields = ('created_at',)
